@@ -16,21 +16,23 @@ user.
 
 Placeholders are inserted in cells in a spreadsheet. It does not matter how
 those cells are formatted, so e.g. it is OK to insert a placeholder (which is
-text content) into a cell formatted as a number or currecy or date, if you
+text content) into a cell formatted as a number or currency or date, if you
 expect the placeholder to resolve to a number or currency or date.
 
 ### Scalars
 
-Simple placholders take the format `${name}`. Here, `name` is the name of a
-key in the placeholders map. The value of this placholder here should be a
-scalar, i.e. not an array or object. The placeholder may appear on its own in a
+Simple placeholders take the format `${name}`. Here, `name` is the name of a
+key in the placeholders map. The value of this placeholder here can be a
+scalar or an object, but not an array. The placeholder may appear on its own in a
 cell, or as part of a text string. For example:
 
     | Extracted on: | ${extractDate} |
+    | Using: | ${project.name} |
 
 might result in (depending on date formatting in the second cell):
 
     | Extracted on: | Jun-01-2013 |
+    | Using: XLSX Template |
 
 Here, `extractDate` may be a date and the second cell may be formatted as a
 number.
@@ -40,7 +42,7 @@ number.
 You can use arrays as placeholder values to indicate that the placeholder cell
 is to be replicated across columns. In this case, the placeholder cannot appear
 inside a text string - it must be the only thing in its cell. For example,
-if the placehodler value `dates` is an array of dates:
+if the placeholder value `dates` is an array of dates:
 
     | ${dates} |
 
@@ -52,11 +54,12 @@ might result in:
 
 Finally, you can build tables made up of multiple rows. In this case, each
 placeholder should be prefixed by `table:` and contain both the name of the
-placeholder variable (a list of objects) and a key (in each object in the list).
+placeholder variable (a list of objects) and a key (in each object in the list),
+separated by a colon.
 For example:
 
     | Name                 | Age                 |
-    | ${table:people.name} | ${table:people.age} |
+    | ${table:people:name} | ${table:people:age} |
 
 If the replacement value under `people` is an array of objects, and each of
 those objects have keys `name` and `age`, you may end up with something like:
@@ -65,7 +68,7 @@ those objects have keys `name` and `age`, you may end up with something like:
     | John Smith  | 20  |
     | Bob Johnson | 22  |
 
-If a particular value is an array, then it will be repeated accross columns as
+If a particular value is an array, then it will be repeated across columns as
 above.
 
 ## Generating reports
@@ -86,6 +89,10 @@ To make this magic happen, you need some code like this:
         // Set up some placeholder values matching the placeholders in the template
         var values = {
                 extractDate: new Date(),
+                project: {
+                    name: 'XLSX Template',
+                    version: '1337'
+                },
                 dates: new Date("2013-06-01"), new Date("2013-06-02"), new Date("2013-06-03"),
                 people: [
                     {name: "John Smith", age: 20},

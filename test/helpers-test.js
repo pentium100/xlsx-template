@@ -98,8 +98,8 @@ describe("Helpers", function() {
             
             buster.expect(t.extractPlaceholders("${foo.bar}")).toEqual([{
                 full: true,
-                key: "bar",
-                name: "foo",
+                key: undefined,
+                name: "foo.bar",
                 placeholder: "${foo.bar}",
                 type: "normal"
             }]);
@@ -120,11 +120,23 @@ describe("Helpers", function() {
         it("can extract placeholders with types and keys", function() {
             var t = new XlsxTemplate();
             
-            buster.expect(t.extractPlaceholders("${table:foo.bar}")).toEqual([{
+            buster.expect(t.extractPlaceholders("${table:foo:bar}")).toEqual([{
                 full: true,
                 key: "bar",
                 name: "foo",
-                placeholder: "${table:foo.bar}",
+                placeholder: "${table:foo:bar}",
+                type: "table"
+            }]);
+        });
+
+        it("can handle placeholders with types and multidimensional keys", function() {
+            var t = new XlsxTemplate();
+
+            buster.expect(t.extractPlaceholders("${table:foo:bar.baz}")).toEqual([{
+                full: true,
+                key: "bar.baz",
+                name: "foo",
+                placeholder: "${table:foo:bar.baz}",
                 type: "table"
             }]);
         });

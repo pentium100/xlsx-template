@@ -27,10 +27,10 @@ describe("CRUD operations", function() {
 
                 var t = new XlsxTemplate(data);
                 buster.expect(t.sharedStrings).toEqual([
-                    "Name", "Role", "Plan table", "${table:planData.name}",
-                    "${table:planData.role}", "${table:planData.days}",
+                    "Name", "Role", "Plan table",
                     "${dates}", "${revision}",
-                    "Extracted on ${extractDate}"
+                    "Extracted on ${extractDate}", "${table:planData:name}",
+                    "${table:planData:role}", "${table:planData:days}"
                 ]);
 
                 done();
@@ -372,7 +372,7 @@ describe("CRUD operations", function() {
                 buster.expect(err).toBeNull();
 
                 var t = new XlsxTemplate(data);
-                
+
                 t.substitute("Tables", {
                     ages: [
                         {name: "John", age: 10},
@@ -431,7 +431,87 @@ describe("CRUD operations", function() {
         });
 
     
+        it("=>can substitute multidimensional values and generate a file", function (done) {
+            fs.readFile(path.join(__dirname, 'templates', 'test-tables-multidimensional.xlsx'), function(err, data) {
+                buster.expect(err).toBeNull();
 
+                var t = new XlsxTemplate(data);
+
+                t.substitute(1, {
+                    extractDate: {
+                        date: new Date("2013-01-02")
+                    },
+                    revision: 10,
+                    dates: [new Date("2013-01-01"), new Date("2013-01-02"), new Date("2013-01-03")],
+                    planData: [
+                        {
+                            user: {
+                                name: "John Smith",
+                                role: "Developer"
+                            },
+                            days: [8, 8, 4]
+                        },
+                        {
+                            user: {
+                                name: "James Smith",
+                                role: "Analyst"
+                            },
+                            days: [4, 4, 4]
+                        },
+                        {
+                            user: {
+                                name: "Jim Smith",
+                                role: "Manager"
+                            },
+                            days: [4, 4, 4]
+                        }
+                    ]
+                });
+
+                var newData = t.generate(),
+                    archive = new zip(newData, {base64: false, checkCRC32: true});
+
+                var sharedStrings = etree.parse(t.archive.file("xl/sharedStrings.xml").asText()).getroot(),
+                    sheet1        = etree.parse(t.archive.file("xl/worksheets/sheet1.xml").asText()).getroot();
+
+                // extract date placeholder - interpolated into string referenced at B4
+                buster.expect(sheet1.find("./sheetData/row/c[@r='B4']").attrib.t).toEqual("s");
+                buster.expect(
+                    sharedStrings.findall("./si")[
+                        parseInt(sheet1.find("./sheetData/row/c[@r='B4']/v").text, 10)
+                        ].find("t").text
+                ).toEqual("Extracted on 2013-01-02T00:00:00.000Z");
+
+                // revision placeholder with a bad key name remains unchanged - cell D4
+                buster.expect(sheet1.find("./sheetData/row/c[@r='D4']").attrib.t).toEqual("s");
+                buster.expect(
+                    sharedStrings.findall("./si")[
+                        parseInt(sheet1.find("./sheetData/row/c[@r='D4']/v").text, 10)
+                        ].find("t").text
+                ).toEqual("${revision.bad.key}");
+
+                // planData placeholder - using multidimensional key names
+                buster.expect(sheet1.find("./sheetData/row/c[@r='B7']").attrib.t).toEqual("s");
+                buster.expect(
+                    sharedStrings.findall("./si")[
+                        parseInt(sheet1.find("./sheetData/row/c[@r='B7']/v").text, 10)
+                        ].find("t").text
+                ).toEqual("John Smith");
+
+                buster.expect(sheet1.find("./sheetData/row/c[@r='C7']").attrib.t).toEqual("s");
+                buster.expect(
+                    sharedStrings.findall("./si")[
+                        parseInt(sheet1.find("./sheetData/row/c[@r='C7']/v").text, 10)
+                        ].find("t").text
+                ).toEqual("Developer");
+
+                // XXX: For debugging only
+                //fs.writeFileSync('test.xlsx', newData, 'binary');
+
+                done();
+            });
+
+        });
 
     });
 
