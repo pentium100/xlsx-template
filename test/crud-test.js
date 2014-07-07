@@ -431,7 +431,7 @@ describe("CRUD operations", function() {
         });
 
     
-        it("=>can substitute multidimensional values and generate a file", function (done) {
+        it("can substitute multidimensional values and generate a file", function (done) {
             fs.readFile(path.join(__dirname, 'templates', 'test-tables-multidimensional.xlsx'), function(err, data) {
                 buster.expect(err).toBeNull();
 
