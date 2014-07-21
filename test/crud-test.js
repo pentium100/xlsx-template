@@ -513,6 +513,83 @@ describe("CRUD operations", function() {
 
         });
 
+        it("can work with missing values of substitutions", function (done) {
+            fs.readFile(path.join(__dirname, 'templates', 'test-tables-multidimensional.xlsx'), function(err, data) {
+                buster.expect(err).toBeNull();
+
+                var t = new XlsxTemplate(data);
+
+                t.substitute(1, {
+                    extractDate: {
+                    },
+                    dates: [new Date("2013-01-01"), undefined, new Date("2013-01-03")],
+                    planData: [
+                        {
+                            user: {
+                                name: "John Smith",
+                                role: "Developer"
+                            },
+                            days: [8, 8, 4]
+                        },
+                        {
+                            user: {
+                                name: "James Smith",
+                                role: "Analyst"
+                            }
+                        },
+                        {
+                            user: {
+                                name: "Jim Smith"
+                            },
+                            days: [4, 4, 4]
+                        }
+                    ]
+                });
+
+                var newData = t.generate(),
+                    archive = new zip(newData, {base64: false, checkCRC32: true});
+
+                var sharedStrings = etree.parse(t.archive.file("xl/sharedStrings.xml").asText()).getroot(),
+                    sheet1        = etree.parse(t.archive.file("xl/worksheets/sheet1.xml").asText()).getroot();
+
+                // date placeholder - remains unchanged - cell B4
+                buster.expect(sheet1.find("./sheetData/row/c[@r='B4']").attrib.t).toEqual("s");
+                buster.expect(
+                    sharedStrings.findall("./si")[
+                        parseInt(sheet1.find("./sheetData/row/c[@r='B4']/v").text, 10)
+                        ].find("t").text
+                ).toEqual("Extracted on ${extractDate.date}");
+
+                // revision place holder - remains unchanged - cell C4
+                buster.expect(sheet1.find("./sheetData/row/c[@r='C4']").attrib.t).toEqual("s");
+                buster.expect(
+                    sharedStrings.findall("./si")[
+                        parseInt(sheet1.find("./sheetData/row/c[@r='C4']/v").text, 10)
+                        ].find("t").text
+                ).toEqual("${revision}");
+
+                // Contains one empty column title - cell E6
+                buster.expect(sheet1.find("./sheetData/row/c[@r='E6']").attrib.t).toEqual("s");
+                buster.expect(
+                    sharedStrings.findall("./si")[
+                        parseInt(sheet1.find("./sheetData/row/c[@r='E6']/v").text, 10)
+                        ].find("t").text
+                ).toEqual("");
+
+                buster.expect(sheet1.find("./sheetData/row/c[@r='D8']").attrib.t).toEqual("s");
+                buster.expect(
+                    sharedStrings.findall("./si")[
+                        parseInt(sheet1.find("./sheetData/row/c[@r='D8']/v").text, 10)
+                        ].find("t").text
+                ).toEqual("");
+
+                // XXX: For debugging only
+                //fs.writeFileSync('test.xlsx', newData, 'binary');
+
+                done();
+            });
+
+        });
     });
 
 });
